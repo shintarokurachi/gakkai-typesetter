@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gakkai Typesetter — 学会誌組版ツール</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    background: #eae7e1;
+    font-family: "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  }
+
+  /* ===== Upload Screen ===== */
+  #upload-screen {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 60px 24px 60px;
+  }
+  .brand { display: flex; align-items: center; gap: 16px; margin-bottom: 36px; }
+  .brand-mark {
+    width: 52px; height: 52px; background: #1a1a1a; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 700; border-radius: 3px; flex-shrink: 0;
+    font-family: sans-serif; letter-spacing: -1px;
+  }
+  .brand-name { font-size: 20px; font-weight: 700; color: #1a1a1a; letter-spacing: 1px; }
+  .brand-name-en { font-size: 12px; color: #999; margin-top: 1px; font-family: Georgia, serif; font-style: italic; }
+  .brand-sub { font-size: 12px; color: #999; margin-top: 2px; font-family: sans-serif; }
+
+  /* Settings panel */
+  .settings {
+    background: rgba(255,255,255,.55);
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .settings-title {
+    font-size: 13px; font-weight: 700; color: #444;
+    margin-bottom: 14px; font-family: sans-serif;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .settings-field { display: flex; flex-direction: column; gap: 3px; }
+  .settings-field.full { grid-column: 1 / -1; }
+  .settings-field label {
+    font-size: 11px; color: #888; font-family: sans-serif;
+  }
+  .settings-field input, .settings-field select {
+    padding: 7px 10px;
+    border: 1px solid #d0cbc3;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: "Noto Serif JP", serif;
+    background: #fff;
+    color: #333;
+  }
+  .settings-field input:focus, .settings-field select:focus {
+    outline: none;
+    border-color: #888;
+  }
+
+  .drop-zone {
+    border: 2px dashed #c4bdb2; border-radius: 10px; padding: 44px 24px;
+    text-align: center; cursor: pointer; background: rgba(255,255,255,.45);
+    transition: all .15s; margin-bottom: 20px;
+  }
+  .drop-zone:hover, .drop-zone.active { border-color: #1a1a1a; background: rgba(255,255,255,.8); }
+  .drop-main { font-size: 15px; color: #333; margin-top: 14px; font-weight: 500; }
+  .drop-sub { font-size: 12px; color: #aaa; margin-top: 6px; font-family: sans-serif; }
+  .loading { font-size: 14px; color: #666; padding: 8px 0; font-family: sans-serif; display: none; }
+  .error-msg {
+    padding: 10px 14px; background: #fff0f0; border: 1px solid #ffc7c7;
+    border-radius: 6px; color: #a8071a; font-size: 13px; margin-bottom: 12px;
+    font-family: sans-serif; display: none;
+  }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .chip {
+    font-size: 11px; padding: 4px 10px; background: rgba(255,255,255,.6);
+    border: 1px solid rgba(0,0,0,.08); border-radius: 20px; color: #555; font-family: sans-serif;
+  }
+  .note { font-size: 12px; color: #aaa; line-height: 1.8; font-family: sans-serif; }
+
+  /* ===== Preview Screen ===== */
+  #preview-screen { display: none; }
+
+  .toolbar {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 20px; background: #1a1a1a; color: #fff; font-family: sans-serif;
+  }
+  .toolbar-left { display: flex; align-items: center; gap: 8px; }
+  .toolbar-logo { font-size: 13px; font-weight: 700; letter-spacing: 0.5px; }
+  .toolbar-sep { color: #555; }
+  .toolbar-file { font-size: 12px; color: #aaa; }
+  .toolbar-right { display: flex; gap: 8px; }
+
+  .btn-ghost {
+    padding: 5px 12px; font-size: 12px; background: transparent;
+    color: #ccc; border: 1px solid #555; border-radius: 4px; cursor: pointer; font-family: sans-serif;
+  }
+  .btn-ghost:hover { border-color: #999; color: #fff; }
+  .btn-solid {
+    padding: 5px 12px; font-size: 12px; background: #fff;
+    color: #1a1a1a; border: none; border-radius: 4px; cursor: pointer;
+    font-weight: 600; font-family: sans-serif;
+  }
+  .btn-solid:hover { background: #e0e0e0; }
+
+  .edit-hint {
+    text-align: center; padding: 8px; font-family: sans-serif;
+    font-size: 12px; color: #888; background: #f5f0ea;
+    border-bottom: 1px solid #e0dbd3;
+  }
+  .edit-hint span {
+    display: inline-block; background: #fff; padding: 2px 8px;
+    border-radius: 3px; border: 1px solid #ddd; margin: 0 2px;
+    font-size: 11px; color: #666;
+  }
+
+  .preview-area { padding: 36px 16px; display: flex; justify-content: center; }
+
+  /* ===== Journal Page ===== */
+  .page {
+    width: 760px; min-height: 1060px; background: #fff;
+    padding: 44px 52px 56px; box-shadow: 0 2px 16px rgba(0,0,0,.09);
+    position: relative;
+  }
+  .page-header { display: flex; justify-content: space-between; margin-bottom: 3px; }
+  .page-header-left { font-size: 10.5px; color: #666; letter-spacing: 2px; }
+  .page-header-right { font-size: 10px; color: #999; font-family: Georgia, serif; }
+  .rule { height: 1px; background: #1a1a1a; }
+  .rule-mid { height: 1px; background: #1a1a1a; margin: 20px 0; }
+
+  .article-category {
+    text-align: center; font-size: 11px; letter-spacing: 6px; color: #666; margin: 24px 0 14px;
+  }
+  .article-title {
+    text-align: center; font-size: 20px; font-weight: 700;
+    line-height: 1.55; color: #1a1a1a; letter-spacing: 1px; margin: 0 0 10px;
+  }
+  .article-author {
+    text-align: center; font-size: 13px; color: #444; letter-spacing: 3px; margin-bottom: 20px;
+  }
+  .abstract-box { margin: 0 28px 8px; padding: 14px 18px; border: 1px solid #ddd; }
+  .abstract-label { font-size: 10px; font-weight: 700; letter-spacing: 4px; color: #555; margin-bottom: 6px; }
+  .abstract-body { font-size: 10.5px; line-height: 1.85; color: #333; text-align: justify; }
+  .keywords-line { font-size: 10.5px; color: #555; margin: 4px 28px 0; line-height: 1.6; }
+  .keywords-line b { font-weight: 700; }
+
+  /* Two-column body */
+  .two-column { column-count: 2; column-gap: 26px; column-rule: 1px solid #eee; }
+  .two-column p {
+    font-size: 10.5px; line-height: 1.9; color: #222;
+    text-align: justify; margin: 0 0 7px; text-indent: 1em;
+  }
+  .two-column .sec-heading {
+    font-size: 11.5px; font-weight: 700; color: #1a1a1a;
+    margin: 14px 0 6px; letter-spacing: 1px; break-after: avoid; text-indent: 0;
+  }
+  .two-column .sub-heading {
+    font-size: 10.5px; font-weight: 700; color: #333;
+    margin: 10px 0 4px; break-after: avoid; text-indent: 0;
+  }
+  .two-column .ref-item {
+    font-size: 9.5px; line-height: 1.75; color: #333;
+    margin: 0 0 3px; text-indent: -1.5em; padding-left: 1.5em; break-inside: avoid;
+  }
+
+  .page-foot-rule {
+    position: absolute; bottom: 38px; left: 52px; right: 52px; height: 1px; background: #1a1a1a;
+  }
+  .page-footer {
+    position: absolute; bottom: 22px; left: 52px; right: 52px;
+    display: flex; justify-content: space-between; font-size: 9px; color: #999; font-family: sans-serif;
+  }
+
+  /* ===== Editable styles ===== */
+  [contenteditable="true"] {
+    outline: none; transition: background .15s, box-shadow .15s;
+    border-radius: 2px; cursor: text;
+  }
+  [contenteditable="true"]:hover {
+    background: rgba(59, 130, 246, 0.04);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12);
+  }
+  [contenteditable="true"]:focus {
+    background: rgba(59, 130, 246, 0.06);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+  }
+
+  .edit-toolbar {
+    display: none; position: fixed; bottom: 20px; left: 50%;
+    transform: translateX(-50%); background: #1a1a1a; color: #fff;
+    padding: 8px 16px; border-radius: 8px; font-family: sans-serif;
+    font-size: 12px; box-shadow: 0 4px 20px rgba(0,0,0,.3); z-index: 100;
+    gap: 12px; align-items: center;
+  }
+  .edit-toolbar.visible { display: flex; }
+  .edit-toolbar button {
+    background: rgba(255,255,255,.15); color: #fff; border: none;
+    padding: 4px 10px; border-radius: 4px; cursor: pointer;
+    font-size: 12px; font-family: sans-serif;
+  }
+  .edit-toolbar button:hover { background: rgba(255,255,255,.25); }
+  .edit-toolbar .edit-label { color: #aaa; }
+
+  /* Print */
+  @media print {
+    body { background: #fff !important; }
+    #upload-screen, .toolbar, .edit-hint, .edit-toolbar { display: none !important; }
+    .preview-area { padding: 0; }
+    .page { box-shadow: none; width: 100%; }
+    [contenteditable="true"]:hover,
+    [contenteditable="true"]:focus { background: none; box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Upload Screen -->
+<div id="upload-screen">
+  <div class="brand">
+    <div class="brand-mark">GT</div>
+    <div>
+      <div class="brand-name">学会誌組版ツール</div>
+      <div class="brand-name-en">Gakkai Typesetter</div>
+      <div class="brand-sub">v0.2 — オープンソース</div>
+    </div>
+  </div>
+
+  <!-- Journal settings -->
+  <div class="settings">
+    <div class="settings-title">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+      誌面設定
+    </div>
+    <div class="settings-grid">
+      <div class="settings-field full">
+        <label>学会誌名</label>
+        <input type="text" id="cfgJournalName" value="学会誌名を入力" placeholder="例：○○研究">
+      </div>
+      <div class="settings-field">
+        <label>巻号</label>
+        <input type="text" id="cfgVolume" value="第1巻" placeholder="例：第22巻">
+      </div>
+      <div class="settings-field">
+        <label>発行年</label>
+        <input type="text" id="cfgYear" value="2026" placeholder="例：2026">
+      </div>
+      <div class="settings-field">
+        <label>記事区分</label>
+        <select id="cfgCategory">
+          <option value="論　文">論文</option>
+          <option value="研究ノート">研究ノート</option>
+          <option value="特集論文">特集論文</option>
+          <option value="書　評">書評</option>
+          <option value="報　告">報告</option>
+        </select>
+      </div>
+      <div class="settings-field">
+        <label>著作権表示</label>
+        <input type="text" id="cfgCopyright" value="© 2026 学会名" placeholder="例：© 2026 ○○学会">
+      </div>
+    </div>
+  </div>
+
+  <div class="drop-zone" id="dropZone">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="12" y1="18" x2="12" y2="12"/>
+      <polyline points="9 15 12 12 15 15"/>
+    </svg>
+    <div class="drop-main">Word原稿（.docx）をここにドロップ</div>
+    <div class="drop-sub">またはクリックして選択</div>
+    <input type="file" id="fileInput" accept=".docx" hidden>
+  </div>
+
+  <div class="loading" id="loading">解析中...</div>
+  <div class="error-msg" id="errorMsg"></div>
+
+  <div class="chips">
+    <span class="chip">二段組レイアウト</span>
+    <span class="chip">見出し自動検出</span>
+    <span class="chip">参考文献分離</span>
+    <span class="chip">要旨抽出</span>
+    <span class="chip">✏️ 直接編集</span>
+  </div>
+
+  <p class="note">
+    Word文書（.docx）をアップロードすると、学会誌のレイアウトでプレビューします。<br>
+    プレビュー画面ではテキストをクリックして直接編集できます。<br>
+    処理はすべてブラウザ内で完結します（サーバーへの送信はありません）。
+  </p>
+</div>
+
+<!-- Preview Screen -->
+<div id="preview-screen">
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <span class="toolbar-logo">Gakkai Typesetter</span>
+      <span class="toolbar-sep">|</span>
+      <span class="toolbar-file" id="toolbarFile"></span>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn-ghost" id="btnBack">← 戻る</button>
+      <button class="btn-solid" id="btnPrint">PDF出力</button>
+    </div>
+  </div>
+  <div class="edit-hint">
+    💡 テキストをクリックすると直接編集できます —
+    <span>タイトル</span><span>著者名</span><span>要旨</span><span>本文</span><span>参考文献</span>
+    すべて編集可能
+  </div>
+  <div class="preview-area">
+    <div id="pageOut"></div>
+  </div>
+</div>
+
+<!-- Floating edit toolbar -->
+<div class="edit-toolbar" id="editToolbar">
+  <span class="edit-label">編集中</span>
+  <button onclick="document.execCommand('bold')"><b>B</b></button>
+  <button onclick="document.execCommand('italic')"><i>I</i></button>
+  <button onclick="document.execCommand('underline')"><u>U</u></button>
+  <button onclick="document.execCommand('superscript')">x²</button>
+  <button onclick="document.execCommand('subscript')">x₂</button>
+  <button onclick="document.execCommand('undo')">↩ 戻す</button>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+// Config
+function cfg() {
+  return {
+    journal: $('cfgJournalName').value || '学会誌名',
+    volume: $('cfgVolume').value || '第1巻',
+    year: $('cfgYear').value || '2026',
+    category: $('cfgCategory').value || '論　文',
+    copyright: $('cfgCopyright').value || '© 2026',
+  };
+}
+
+// Events
+$('dropZone').addEventListener('click', () => $('fileInput').click());
+$('dropZone').addEventListener('dragover', e => { e.preventDefault(); $('dropZone').classList.add('active'); });
+$('dropZone').addEventListener('dragleave', () => $('dropZone').classList.remove('active'));
+$('dropZone').addEventListener('drop', e => { e.preventDefault(); $('dropZone').classList.remove('active'); handle(e.dataTransfer.files[0]); });
+$('fileInput').addEventListener('change', e => handle(e.target.files[0]));
+$('btnBack').addEventListener('click', () => { $('preview-screen').style.display='none'; $('upload-screen').style.display='block'; $('editToolbar').classList.remove('visible'); });
+$('btnPrint').addEventListener('click', () => window.print());
+
+// Edit toolbar visibility
+document.addEventListener('focusin', e => {
+  if (e.target.hasAttribute('contenteditable')) $('editToolbar').classList.add('visible');
+});
+document.addEventListener('focusout', () => {
+  setTimeout(() => {
+    const a = document.activeElement;
+    if (!a || !a.hasAttribute('contenteditable')) $('editToolbar').classList.remove('visible');
+  }, 150);
+});
+
+// File handler
+async function handle(file) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.docx')) { err('.docx ファイルを選択してください'); return; }
+  err(''); $('loading').style.display='block';
+  try {
+    const ab = await file.arrayBuffer();
+    const res = await mammoth.convertToHtml({ arrayBuffer: ab });
+    render(parse(res.value));
+    $('toolbarFile').textContent = file.name;
+    $('upload-screen').style.display='none';
+    $('preview-screen').style.display='block';
+  } catch(e) { err('解析失敗: '+e.message); }
+  $('loading').style.display='none';
+}
+
+function err(m) { $('errorMsg').textContent=m; $('errorMsg').style.display=m?'block':'none'; }
+
+// Parse
+function parse(html) {
+  const d = document.createElement('div'); d.innerHTML = html;
+  let title='', author='', abs='', kw='', body=[], refs=[];
+  let inR=false, inA=false, tF=false, aF=false;
+  for (const el of d.querySelectorAll('h1,h2,h3,h4,p,ol,ul,table')) {
+    const tg=el.tagName.toLowerCase(), tx=el.textContent.trim(), ih=el.innerHTML.trim();
+    if(!tx) continue;
+    if(!tF&&(tg==='h1'||(tg==='p'&&el.querySelector('strong')&&tx.length<120&&body.length===0))){title=tx;tF=true;continue;}
+    if(tF&&!aF&&tg==='p'&&tx.length<60&&!tx.includes('。')&&body.length===0){
+      if(tx.length<40&&!/^[0-9]/.test(tx)&&!/^(要旨|abstract|キーワード|keyword|はじめに|序論)/i.test(tx)){author=tx;aF=true;continue;}
+    }
+    if(/^(要旨|abstract|抄録)/i.test(tx)){inA=true;const r=tx.replace(/^(要旨|abstract|抄録)[：:\s]*/i,'');if(r.length>20){abs=r;inA=false;}continue;}
+    if(inA&&tg==='p'){abs+=(abs?' ':'')+tx;if(tx.length>50)inA=false;continue;}
+    if(/^(キーワード|keywords|key\s?words)[：:\s]/i.test(tx)){kw=tx.replace(/^(キーワード|keywords|key\s?words)[：:\s]*/i,'');inA=false;continue;}
+    if(/^(参考文献|引用文献|references|bibliography)$/i.test(tx)){inR=true;continue;}
+    if(inR){refs.push({tg,ih,tx});}else{body.push({tg,ih,tx});}
+  }
+  return {title,author,abs,kw,body,refs};
+}
+
+// Render
+function render(p) {
+  const c = cfg();
+  let bh='';
+  for(const i of p.body){
+    if(i.tg==='h1'||i.tg==='h2')
+      bh+=`<div class="sec-heading" contenteditable="true">${i.ih}</div>`;
+    else if(i.tg==='h3'||i.tg==='h4')
+      bh+=`<div class="sub-heading" contenteditable="true">${i.ih}</div>`;
+    else
+      bh+=`<p contenteditable="true">${i.ih}</p>`;
+  }
+  if(p.refs.length){
+    bh+='<div class="sec-heading">参考文献</div>';
+    for(const r of p.refs) bh+=`<p class="ref-item" contenteditable="true">${r.ih}</p>`;
+  }
+
+  const ab = p.abs
+    ? `<div class="abstract-box">
+         <div class="abstract-label">要　旨</div>
+         <div class="abstract-body" contenteditable="true">${esc(p.abs)}</div>
+       </div>` : '';
+
+  const kw = p.kw
+    ? `<div class="keywords-line"><b>キーワード：</b><span contenteditable="true">${esc(p.kw)}</span></div>` : '';
+
+  const volYear = `${esc(c.volume)}（${esc(c.year)}）`;
+
+  $('pageOut').innerHTML=`<div class="page">
+    <div class="page-header">
+      <span class="page-header-left" contenteditable="true">${esc(c.journal)}</span>
+      <span class="page-header-right" contenteditable="true">${volYear} pp. 1–XX</span>
+    </div>
+    <div class="rule"></div>
+    <div class="article-category" contenteditable="true">${esc(c.category)}</div>
+    <h1 class="article-title" contenteditable="true">${esc(p.title)||'（タイトルをここに入力）'}</h1>
+    <div class="article-author" contenteditable="true">${esc(p.author)||'（著者名をここに入力）'}</div>
+    ${ab}${kw}
+    <div class="rule-mid"></div>
+    <div class="two-column">${bh}</div>
+    <div class="page-foot-rule"></div>
+    <div class="page-footer">
+      <span contenteditable="true">${esc(c.copyright)}</span>
+      <span>1</span>
+    </div>
+  </div>`;
+}
+
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+</script>
+</body>
+</html>
